@@ -1,0 +1,176 @@
+#!/bin/bash
+#
+# This is a setup script to run on a Fedora Linux box to install
+# my frequently used tools.
+#
+# On a VM or server, probably just want to run with the "-t" option
+# to get the terminal optimized tools.
+#
+# On a workstation, you'll want the "-x" option to get the xWindows tools.
+# You probably want to run it with "-x -t" to get both.
+#
+# Finally, for a Fornesic workstation, you'll want "-x -t -f" to get all
+# three sets of tools.
+#
+# Version History
+# 0.9 April 23 2021, initial public release
+#
+# Copyright 2021, Mark W. Jeanmougin. Licensed under the GPL v3 license.
+#
+
+instme="time dnf install -y"
+instgme="time dnf groupinstall -y"
+
+# ------------------------------------------------------------
+PROGNAME="$(basename "$0")"
+usage () {
+	echo "$PROGNAME Usage"
+	echo "$PROGNAME [ -t|--terminal] [-x|--xwin] [-f|--forensics]"
+	echo "to install software for:"
+	echo "terminal based usage"
+        echo "XWindows based"
+	echo "forensics packages"
+	exit 2
+}
+
+# Process command line arguments
+# By default install neither terminal nor Xwindows applications
+# In otherwords, if this script is run with no options, take
+# no action.
+terminal=0
+xwin=0
+forensics=0
+
+while [[ $# -ge 1 ]]
+do
+ key="$1"
+ case $key in
+     -t|--terminal)
+    # Install Terminal apps
+    terminal=1
+  ;;
+     -x|--xwin)
+	     # Install XWindows apps
+	     xwin=1
+  ;;
+     -f|--forensics)
+	     # Install forensics apps
+	     forensics=1
+  ;;
+  *)
+  echo "Unkown parameter $key"
+  usage;
+  ;;
+ esac
+ shift
+done # end while loop
+
+if [[ $terminal -eq 0 && $xwin -eq 0 && $forensics -eq 0 ]]; then
+	usage;
+else
+	echo "terminal  : " $terminal
+	echo "xwin      : " $xwin
+	echo "forensics : " $forensics
+fi
+
+
+# ------------------------------------------------------------
+# Check for root
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root"
+   usage
+fi
+
+
+# ------------------------------------------------------------
+# Setting up for more scripts
+#
+# sudo usermod -a -G wheel markj
+# sudo chgrp wheel /usr/local/sbin/
+# sudo chmod g+w /usr/local/sbin/
+# rsync -avx 192.168.1.11:/usr/local/sbin/ /usr/local/sbin/
+# 
+
+# ------------------------------------------------------------
+if [[ $terminal -eq 1 ]];
+then
+	# You'll need this on WSL Fedora
+	time dnf install -y rsync openssh-clients procps-ng vim-enhanced mlocate finger man-pages man-db cracklib-dicts telnet iputils net-tools iproute
+	time dnf install -y words
+
+	# Normal text based things
+	time dnf install -y elinks lynx links curl wget
+	time dnf install -y mongoose srm sysstat lm_sensors md5deep
+	time dnf install -y parallel pv pigz pbzip2 lz4 xz par2cmdline
+	time dnf install -y ghostscript ImageMagick poppler-utils perl-Image-ExifTool a2ps
+	time dnf install -y emacs-nox 
+	time dnf install -y youtube-dl video-downloader
+	time dnf install -y banner fortune-mod cowsay lolcat neofetch
+	time dnf install -y htop bpytop
+	time dnf install -y dnf-plugin-system-upgrade
+	time dnf install -y tcpdump wireshark-cli
+
+	# Not sure that I still need this one.
+	# time dnf install -y http://rpm.livna.org/livna-release.rpm 
+	time dnf install -y \
+		https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm \
+		https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+	# For image / video processing / performance benchmarking
+	time dnf install -y ffmpeg
+fi
+
+
+# ============================================================
+# forensics stuff
+if [[ $forensics -eq 1 ]];
+then
+	time yum install -y https://forensics.cert.org/cert-forensics-tools-release-$(rpm -E %fedora).rpm
+	time dnf install -y CERT-Forensics-Tools
+fi
+
+
+# ============================================================
+# XWindows stuff
+if [[ $xwin -eq 1 ]];
+then
+	# Install Groups
+	time dnf groupinstall -y "System Tools"
+	time dnf groupinstall -y "Security Lab" 
+	time dnf groupinstall -y "Xfce Desktop" xfce
+	time dnf groupinstall -y kde
+	time dnf groupinstall -y editors
+	time dnf groupinstall -y office
+	time dnf groupinstall -y libreoffice
+	time dnf groupinstall -y "Engineering and Scientific"
+	# These next two seem like maybe they're no longer used?
+	time dnf groupinstall -y "Text-based Internet"
+	time dnf groupinstall -y editors
+
+
+	time dnf install -y xterm xauth emacs xemacs xlockmore Eterm enlightenment gkrellm geeqie 
+	time dnf install -y okular evince geeqie
+	time dnf install -y chromium
+	time dnf install -y wireshark
+	time dnf install -y gnumeric abiword
+	time dnf install -y cool-retro-term
+
+	time dnf install -y vlc mplayer mplayer-gui
+fi
+
+
+
+# ============================================================
+# Notes
+
+# Sync a directory
+# rsync -avx server:/path/to/dir/ /path/to/dir/
+
+# Monitoring gui thing that runs on http://localhost:19999/
+# groupadd netdata
+# time dnf install -y netdata
+
+# Install and enable sshd
+# time dnf install -y openssh-server
+# systemctl start sshd.service
+# systemctl enable sshd.service
+
